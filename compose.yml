@@ -1,0 +1,49 @@
+services:
+  dns:
+    build:
+      context: contexts/dnsmasq
+    volumes:
+      - ./conf/dnsmasq.conf:/etc/dnsmasq.conf:ro
+    ports:
+      - "53:53/udp"
+    cap_add:
+      - NET_BIND_SERVICE
+    restart: always
+  doh:
+    image: satishweb/doh-server
+    environment:
+      UPSTREAM_DNS_SERVER: "udp:dns:53"
+    depends_on:
+      - dns
+  http:
+    image: caddy:2
+    volumes:
+      - ./conf/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/acme/certs/:/opt/acme/certs:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    dns:
+      - 172.18.0.1
+    cap_add:
+      - NET_BIND_SERVICE
+    depends_on:
+      - dns
+      - acme
+    restart: always
+  acme:
+    build:
+      context: contexts/step-ca
+    environment:
+      DOCKER_STEPCA_INIT_NAME: Company Internal ACME
+      DOCKER_STEPCA_INIT_DNS_NAMES: acme.company.com, company.com
+      DOCKER_STEPCA_INIT_REMOTE_MANAGEMENT: "true"
+    volumes:
+      - ./data/acme:/home/step:rw
+    ports:
+      - "9090:9000"
+    dns:
+      - 172.18.0.1
+    depends_on:
+      - dns
+    restart: always

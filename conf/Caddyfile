@@ -1,0 +1,13 @@
+{
+	acme_ca https://acme.company.com:9090/acme/default/directory
+	acme_ca_root /opt/acme/certs/root_ca.crt
+}
+
+http://10.0.1.230, acme.company.com {
+	root /opt/acme/certs
+	file_server browse
+}
+
+https://10.0.1.230 {
+	reverse_proxy doh:8053
+}
